@@ -96,6 +96,17 @@ class _SearchScreenState extends State<SearchScreen> {
         ),
         backgroundColor: const Color(0xFF1C2228),
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bookmark, color: Colors.greenAccent),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const LibraryScreen()),
+              );
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -313,6 +324,138 @@ class DetailScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class LibraryScreen extends StatefulWidget {
+  const LibraryScreen({super.key});
+
+  @override
+  State<LibraryScreen> createState() => _LibraryScreenState();
+}
+
+class _LibraryScreenState extends State<LibraryScreen> {
+  bool _isLoading = true;
+  List<dynamic> _userGames = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserGames();
+  }
+
+  Future<void> _fetchUserGames() async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+
+    if (user == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    try {
+      final response = await supabase
+          .from('user_games')
+          .select()
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false);
+
+      setState(() {
+        _userGames = response;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      debugPrint('Error al cargar la biblioteca: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Mi Biblioteca',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: const Color(0xFF1C2228),
+      ),
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(color: Colors.greenAccent),
+            )
+          : _userGames.isEmpty
+          ? Center(
+              child: Text(
+                'Aún no has guardado ningún juego.',
+                style: TextStyle(color: Colors.grey[500], fontSize: 16),
+              ),
+            )
+          : GridView.builder(
+              padding: const EdgeInsets.all(10),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                childAspectRatio: 0.68,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+              ),
+              itemCount: _userGames.length,
+              itemBuilder: (context, index) {
+                final item = _userGames[index];
+                final coverUrl = item['cover_url'] ?? '';
+                final status = item['status'] == 'completed'
+                    ? 'Completado'
+                    : 'Pendiente';
+                final statusColor = item['status'] == 'completed'
+                    ? Colors.green
+                    : Colors.blueGrey;
+
+                return Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: Image.network(
+                        coverUrl,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: double.infinity,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          color: Colors.grey[850],
+                          child: const Center(
+                            child: Icon(
+                              Icons.broken_image,
+                              color: Colors.white54,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 4,
+                          horizontal: 2,
+                        ),
+                        color: Colors.black87,
+                        child: Text(
+                          status,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: statusColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
     );
   }
 }
