@@ -31,6 +31,8 @@ class SupabaseService {
     required String gameName,
     required String coverUrl,
     required String status,
+    double? rating,
+    String? review,
   }) async {
     final authenticated = await ensureAuthenticated();
     if (!authenticated) throw Exception('No se pudo autenticar el usuario.');
@@ -43,6 +45,8 @@ class SupabaseService {
       'game_name': gameName,
       'cover_url': coverUrl,
       'status': status,
+      if (rating != null) 'rating': rating,
+      if (review != null) 'review': review,
     });
   }
 
