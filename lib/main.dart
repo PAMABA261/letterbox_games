@@ -1,8 +1,16 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Supabase.initialize(
+    url: 'https://vbexbxxxagdfyvrxuyqp.supabase.co',
+    publishableKey: 'sb_publishable_5WwmzrhIrx_T60sjaRgcJQ_zxUndOxt',
+  );
+
   runApp(const BackloggdCloneApp());
 }
 
@@ -157,8 +165,7 @@ class _SearchScreenState extends State<SearchScreen> {
                             );
                           },
                           child: Hero(
-                            tag: game['id']
-                                .toString(), // El tag único para la animación
+                            tag: game['id'].toString(),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(6),
                               child: Image.network(
@@ -192,6 +199,50 @@ class DetailScreen extends StatelessWidget {
   final String coverUrl;
 
   const DetailScreen({super.key, required this.game, required this.coverUrl});
+
+  Future<void> _saveGame(BuildContext context, String status) async {
+    final supabase = Supabase.instance.client;
+
+    if (supabase.auth.currentUser == null) {
+      try {
+        await supabase.auth.signInWithPassword(
+          email: 'test@test.com',
+          password: '12345',
+        );
+      } catch (authError) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error de autenticación: $authError')),
+          );
+        }
+        return;
+      }
+    }
+
+    final currentUserId = supabase.auth.currentUser!.id;
+
+    try {
+      await supabase.from('user_games').insert({
+        'user_id': currentUserId,
+        'game_id': game['id'],
+        'game_name': game['name'],
+        'cover_url': coverUrl,
+        'status': status,
+      });
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('¡Juego guardado en tu biblioteca!')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al guardar en la base de datos: $e')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -227,7 +278,29 @@ class DetailScreen extends StatelessWidget {
                 color: Colors.white,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () => _saveGame(context, 'plan_to_play'),
+                  icon: const Icon(Icons.bookmark_add),
+                  label: const Text('Pendiente'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blueGrey,
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () => _saveGame(context, 'completed'),
+                  icon: const Icon(Icons.check_circle),
+                  label: const Text('Completado'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green[800],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
             Text(
               game['summary'] ??
                   'No hay descripción disponible para este título.',
