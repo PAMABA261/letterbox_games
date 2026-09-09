@@ -8,14 +8,23 @@ class LibraryScreen extends StatefulWidget {
   State<LibraryScreen> createState() => _LibraryScreenState();
 }
 
-class _LibraryScreenState extends State<LibraryScreen> {
+class _LibraryScreenState extends State<LibraryScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   bool _isLoading = true;
   List<dynamic> _userGames = [];
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 3, vsync: this);
     _loadLibrary();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadLibrary() async {
@@ -25,6 +34,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
       _userGames = games;
       _isLoading = false;
     });
+  }
+
+  List<dynamic> _getFilteredGames(String filter) {
+    if (filter == 'completed') {
+      return _userGames.where((game) => game['status'] == 'completed').toList();
+    } else if (filter == 'plan_to_play') {
+      return _userGames
+          .where((game) => game['status'] == 'plan_to_play')
+          .toList();
+    }
+    return _userGames;
   }
 
   void _showEditDeleteModal(Map<String, dynamic> item) {
@@ -213,6 +233,139 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
   }
 
+  Widget _buildGameGrid(List<dynamic> gamesList) {
+    if (gamesList.isEmpty) {
+      return Center(
+        child: Text(
+          'No hay juegos en esta sección.',
+          style: TextStyle(color: Colors.grey[500], fontSize: 16),
+        ),
+      );
+    }
+
+    return GridView.builder(
+      padding: const EdgeInsets.all(10),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.72,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+      ),
+      itemCount: gamesList.length,
+      itemBuilder: (context, index) {
+        final item = gamesList[index];
+        final coverUrl = item['cover_url'] ?? '';
+        final gameName = item['game_name'] ?? 'Juego';
+        final status = item['status'] == 'completed'
+            ? 'Completado'
+            : 'Pendiente';
+        final statusColor = item['status'] == 'completed'
+            ? Colors.green
+            : Colors.blueGrey;
+        final rating = item['rating'];
+        final review = item['review'];
+
+        return GestureDetector(
+          onTap: () => _showEditDeleteModal(item),
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF1C2228),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(8),
+                    ),
+                    child: Image.network(
+                      coverUrl,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        color: Colors.grey[850],
+                        child: const Center(
+                          child: Icon(
+                            Icons.broken_image,
+                            color: Colors.white54,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        gameName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            status,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: statusColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          if (rating != null)
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.star,
+                                  size: 12,
+                                  color: Colors.amber,
+                                ),
+                                const SizedBox(width: 2),
+                                Text(
+                                  '$rating',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.amber,
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                      if (review != null && review.toString().isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          '"$review"',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey[400],
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -222,141 +375,29 @@ class _LibraryScreenState extends State<LibraryScreen> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: const Color(0xFF1C2228),
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: Colors.greenAccent,
+          labelColor: Colors.greenAccent,
+          unselectedLabelColor: Colors.grey,
+          tabs: const [
+            Tab(text: 'Todos'),
+            Tab(text: 'Completados'),
+            Tab(text: 'Pendientes'),
+          ],
+        ),
       ),
       body: _isLoading
           ? const Center(
               child: CircularProgressIndicator(color: Colors.greenAccent),
             )
-          : _userGames.isEmpty
-          ? Center(
-              child: Text(
-                'Aún no has guardado ningún juego.',
-                style: TextStyle(color: Colors.grey[500], fontSize: 16),
-              ),
-            )
-          : GridView.builder(
-              padding: const EdgeInsets.all(10),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.72,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-              ),
-              itemCount: _userGames.length,
-              itemBuilder: (context, index) {
-                final item = _userGames[index];
-                final coverUrl = item['cover_url'] ?? '';
-                final gameName = item['game_name'] ?? 'Juego';
-                final status = item['status'] == 'completed'
-                    ? 'Completado'
-                    : 'Pendiente';
-                final statusColor = item['status'] == 'completed'
-                    ? Colors.green
-                    : Colors.blueGrey;
-                final rating = item['rating'];
-                final review = item['review'];
-
-                return GestureDetector(
-                  onTap: () => _showEditDeleteModal(item),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1C2228),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: ClipRRect(
-                            borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(8),
-                            ),
-                            child: Image.network(
-                              coverUrl,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Container(
-                                    color: Colors.grey[850],
-                                    child: const Center(
-                                      child: Icon(
-                                        Icons.broken_image,
-                                        color: Colors.white54,
-                                      ),
-                                    ),
-                                  ),
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                gameName,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    status,
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: statusColor,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  if (rating != null)
-                                    Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.star,
-                                          size: 12,
-                                          color: Colors.amber,
-                                        ),
-                                        const SizedBox(width: 2),
-                                        Text(
-                                          '$rating',
-                                          style: const TextStyle(
-                                            fontSize: 10,
-                                            color: Colors.amber,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                ],
-                              ),
-                              if (review != null &&
-                                  review.toString().isNotEmpty) ...[
-                                const SizedBox(height: 4),
-                                Text(
-                                  '"$review"',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.grey[400],
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
+          : TabBarView(
+              controller: _tabController,
+              children: [
+                _buildGameGrid(_getFilteredGames('all')),
+                _buildGameGrid(_getFilteredGames('completed')),
+                _buildGameGrid(_getFilteredGames('plan_to_play')),
+              ],
             ),
     );
   }
