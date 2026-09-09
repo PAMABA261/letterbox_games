@@ -45,8 +45,8 @@ class SupabaseService {
       'game_name': gameName,
       'cover_url': coverUrl,
       'status': status,
-      if (rating != null) 'rating': rating,
-      if (review != null) 'review': review,
+      ...?(rating != null ? {'rating': rating} : null),
+      ...?(review != null ? {'review': review} : null),
     });
   }
 

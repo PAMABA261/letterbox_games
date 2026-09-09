@@ -44,11 +44,30 @@ class _DetailScreenState extends State<DetailScreen> {
     }
   }
 
+  String _getReleaseYear() {
+    final timestamp = widget.game['first_release_date'];
+    if (timestamp == null) return 'Desconocido';
+    final date = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
+    return date.year.toString();
+  }
+
+  String _getGenres() {
+    final genresList = widget.game['genres'];
+    if (genresList == null || genresList is! List || genresList.isEmpty) {
+      return 'No especificado';
+    }
+    return genresList.map((g) => g['name'] as String).join(', ');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.game['name'] ?? 'Detalle'),
+        title: Text(
+          widget.game['name'] ?? 'Detalle',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         backgroundColor: const Color(0xFF1C2228),
       ),
       body: SingleChildScrollView(
@@ -63,7 +82,7 @@ class _DetailScreenState extends State<DetailScreen> {
                   borderRadius: BorderRadius.circular(12),
                   child: Image.network(
                     widget.coverUrl,
-                    height: 250,
+                    height: 280,
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -78,9 +97,49 @@ class _DetailScreenState extends State<DetailScreen> {
                 color: Colors.white,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
 
-            // --- SECCIÓN DE PUNTUACIÓN (ESTRELLAS) ---
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.calendar_today,
+                      size: 14,
+                      color: Colors.greenAccent,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Lanzamiento: ${_getReleaseYear()}',
+                      style: TextStyle(color: Colors.grey[400], fontSize: 13),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.category,
+                      size: 14,
+                      color: Colors.greenAccent,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Géneros: ${_getGenres()}',
+                        style: TextStyle(color: Colors.grey[400], fontSize: 13),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const Divider(height: 30, color: Colors.grey),
+
             const Text(
               'Tu Puntuación',
               style: TextStyle(
@@ -88,14 +147,14 @@ class _DetailScreenState extends State<DetailScreen> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Row(
               children: List.generate(5, (index) {
                 return IconButton(
                   icon: Icon(
                     index < _rating ? Icons.star : Icons.star_border,
                     color: Colors.amber,
-                    size: 30,
+                    size: 28,
                   ),
                   onPressed: () {
                     setState(() {
@@ -145,12 +204,21 @@ class _DetailScreenState extends State<DetailScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
+            const Text(
+              'Sinopsis',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 8),
             Text(
               widget.game['summary'] ??
                   'No hay descripción disponible para este título.',
               style: TextStyle(
-                fontSize: 15,
+                fontSize: 14,
                 color: Colors.grey[300],
                 height: 1.4,
               ),

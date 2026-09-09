@@ -93,7 +93,7 @@ class _LibraryScreenState extends State<LibraryScreen>
                     ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
-                      value: currentStatus,
+                      initialValue: currentStatus,
                       dropdownColor: const Color(0xFF2C3440),
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
@@ -115,8 +115,9 @@ class _LibraryScreenState extends State<LibraryScreen>
                         ),
                       ],
                       onChanged: (val) {
-                        if (val != null)
+                        if (val != null) {
                           setModalState(() => currentStatus = val);
+                        }
                       },
                     ),
                     const SizedBox(height: 16),
@@ -177,6 +178,7 @@ class _LibraryScreenState extends State<LibraryScreen>
                             ),
                             onPressed: () async {
                               await SupabaseService.deleteGame(item['game_id']);
+                              if (!context.mounted) return;
                               Navigator.pop(context);
                               _loadLibrary();
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -211,6 +213,7 @@ class _LibraryScreenState extends State<LibraryScreen>
                                     ? reviewController.text
                                     : null,
                               );
+                              if (!context.mounted) return;
                               Navigator.pop(context);
                               _loadLibrary();
                               ScaffoldMessenger.of(context).showSnackBar(

@@ -31,7 +31,7 @@ class _SearchScreenState extends State<SearchScreen> {
           'Accept': 'application/json',
         },
         body:
-            'search "$query"; fields name, cover.url, summary, first_release_date; where cover != null; limit 18;',
+            'search "$query"; fields name, cover.url, summary, first_release_date, genres.name; where cover != null; limit 18;',
       );
 
       if (response.statusCode == 200) {
