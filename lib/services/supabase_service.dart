@@ -64,4 +64,35 @@ class SupabaseService {
 
     return response;
   }
+
+  static Future<void> updateGame({
+    required int gameId,
+    required String status,
+    double? rating,
+    String? review,
+  }) async {
+    final authenticated = await ensureAuthenticated();
+    if (!authenticated) throw Exception('No se pudo autenticar el usuario.');
+
+    final userId = client.auth.currentUser!.id;
+
+    await client
+        .from('user_games')
+        .update({'status': status, 'rating': rating, 'review': review})
+        .eq('user_id', userId)
+        .eq('game_id', gameId);
+  }
+
+  static Future<void> deleteGame(int gameId) async {
+    final authenticated = await ensureAuthenticated();
+    if (!authenticated) throw Exception('No se pudo autenticar el usuario.');
+
+    final userId = client.auth.currentUser!.id;
+
+    await client
+        .from('user_games')
+        .delete()
+        .eq('user_id', userId)
+        .eq('game_id', gameId);
+  }
 }
