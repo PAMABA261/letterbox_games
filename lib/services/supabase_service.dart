@@ -39,7 +39,7 @@ class SupabaseService {
 
     final userId = client.auth.currentUser!.id;
 
-    await client.from('user_games').insert({
+    await client.from('user_games').upsert({
       'user_id': userId,
       'game_id': gameId,
       'game_name': gameName,
@@ -47,7 +47,7 @@ class SupabaseService {
       'status': status,
       ...?(rating != null ? {'rating': rating} : null),
       ...?(review != null ? {'review': review} : null),
-    });
+    }, onConflict: 'user_id, game_id');
   }
 
   static Future<List<dynamic>> fetchUserGames() async {
