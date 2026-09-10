@@ -13,11 +13,12 @@ class _LibraryScreenState extends State<LibraryScreen>
   late TabController _tabController;
   bool _isLoading = true;
   List<dynamic> _userGames = [];
+  String _sortMethod = 'date_desc';
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _loadLibrary();
   }
 
@@ -36,15 +37,30 @@ class _LibraryScreenState extends State<LibraryScreen>
     });
   }
 
-  List<dynamic> _getFilteredGames(String filter) {
-    if (filter == 'completed') {
-      return _userGames.where((game) => game['status'] == 'completed').toList();
-    } else if (filter == 'plan_to_play') {
-      return _userGames
-          .where((game) => game['status'] == 'plan_to_play')
-          .toList();
+  List<dynamic> _getFilteredAndSortedGames(String filter) {
+    List<dynamic> filtered = _userGames;
+
+    if (filter != 'all') {
+      filtered = _userGames.where((game) => game['status'] == filter).toList();
     }
-    return _userGames;
+
+    List<dynamic> sorted = List.from(filtered);
+
+    if (_sortMethod == 'rating_desc') {
+      sorted.sort((a, b) {
+        final ratingA = (a['rating'] as num?)?.toDouble() ?? -1.0;
+        final ratingB = (b['rating'] as num?)?.toDouble() ?? -1.0;
+        return ratingB.compareTo(ratingA);
+      });
+    } else if (_sortMethod == 'name_asc') {
+      sorted.sort((a, b) {
+        final nameA = (a['game_name'] ?? '').toString().toLowerCase();
+        final nameB = (b['game_name'] ?? '').toString().toLowerCase();
+        return nameA.compareTo(nameB);
+      });
+    }
+
+    return sorted;
   }
 
   void _showEditDeleteModal(Map<String, dynamic> item) {
@@ -106,12 +122,20 @@ class _LibraryScreenState extends State<LibraryScreen>
                       ),
                       items: const [
                         DropdownMenuItem(
+                          value: 'playing',
+                          child: Text('Jugando'),
+                        ),
+                        DropdownMenuItem(
                           value: 'plan_to_play',
                           child: Text('Pendiente'),
                         ),
                         DropdownMenuItem(
                           value: 'completed',
                           child: Text('Completado'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'dropped',
+                          child: Text('Abandonado'),
                         ),
                       ],
                       onChanged: (val) {
@@ -236,6 +260,34 @@ class _LibraryScreenState extends State<LibraryScreen>
     );
   }
 
+  String _getStatusText(String status) {
+    switch (status) {
+      case 'playing':
+        return 'Jugando';
+      case 'completed':
+        return 'Completado';
+      case 'dropped':
+        return 'Abandonado';
+      case 'plan_to_play':
+      default:
+        return 'Pendiente';
+    }
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'playing':
+        return Colors.orange;
+      case 'completed':
+        return Colors.green;
+      case 'dropped':
+        return Colors.red;
+      case 'plan_to_play':
+      default:
+        return Colors.blueGrey;
+    }
+  }
+
   Widget _buildGameGrid(List<dynamic> gamesList) {
     if (gamesList.isEmpty) {
       return Center(
@@ -259,12 +311,10 @@ class _LibraryScreenState extends State<LibraryScreen>
         final item = gamesList[index];
         final coverUrl = item['cover_url'] ?? '';
         final gameName = item['game_name'] ?? 'Juego';
-        final status = item['status'] == 'completed'
-            ? 'Completado'
-            : 'Pendiente';
-        final statusColor = item['status'] == 'completed'
-            ? Colors.green
-            : Colors.blueGrey;
+
+        final statusText = _getStatusText(item['status']);
+        final statusColor = _getStatusColor(item['status']);
+
         final rating = item['rating'];
         final review = item['review'];
 
@@ -318,7 +368,7 @@ class _LibraryScreenState extends State<LibraryScreen>
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            status,
+                            statusText,
                             style: TextStyle(
                               fontSize: 10,
                               color: statusColor,
@@ -378,15 +428,44 @@ class _LibraryScreenState extends State<LibraryScreen>
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: const Color(0xFF1C2228),
+        actions: [
+          // Botón de Ordenación
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.sort, color: Colors.greenAccent),
+            tooltip: 'Ordenar',
+            onSelected: (value) {
+              setState(() {
+                _sortMethod = value;
+              });
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'date_desc',
+                child: Text('Más recientes'),
+              ),
+              const PopupMenuItem(
+                value: 'rating_desc',
+                child: Text('Mejor puntuación'),
+              ),
+              const PopupMenuItem(
+                value: 'name_asc',
+                child: Text('Alfabético (A-Z)'),
+              ),
+            ],
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
+          isScrollable: true,
           indicatorColor: Colors.greenAccent,
           labelColor: Colors.greenAccent,
           unselectedLabelColor: Colors.grey,
           tabs: const [
             Tab(text: 'Todos'),
-            Tab(text: 'Completados'),
+            Tab(text: 'Jugando'),
             Tab(text: 'Pendientes'),
+            Tab(text: 'Completados'),
+            Tab(text: 'Abandonados'),
           ],
         ),
       ),
@@ -397,9 +476,11 @@ class _LibraryScreenState extends State<LibraryScreen>
           : TabBarView(
               controller: _tabController,
               children: [
-                _buildGameGrid(_getFilteredGames('all')),
-                _buildGameGrid(_getFilteredGames('completed')),
-                _buildGameGrid(_getFilteredGames('plan_to_play')),
+                _buildGameGrid(_getFilteredAndSortedGames('all')),
+                _buildGameGrid(_getFilteredAndSortedGames('playing')),
+                _buildGameGrid(_getFilteredAndSortedGames('plan_to_play')),
+                _buildGameGrid(_getFilteredAndSortedGames('completed')),
+                _buildGameGrid(_getFilteredAndSortedGames('dropped')),
               ],
             ),
     );

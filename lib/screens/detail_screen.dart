@@ -183,26 +183,50 @@ class _DetailScreenState extends State<DetailScreen> {
             ),
             const SizedBox(height: 20),
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () => _saveGame('plan_to_play'),
-                  icon: const Icon(Icons.bookmark_add),
-                  label: const Text('Pendiente'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blueGrey,
+            Center(
+              child: Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                alignment: WrapAlignment.center,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () => _saveGame('playing'),
+                    icon: const Icon(Icons.videogame_asset),
+                    label: const Text('Jugando'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange[700],
+                      foregroundColor: Colors.white,
+                    ),
                   ),
-                ),
-                ElevatedButton.icon(
-                  onPressed: () => _saveGame('completed'),
-                  icon: const Icon(Icons.check_circle),
-                  label: const Text('Completado'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green[800],
+                  ElevatedButton.icon(
+                    onPressed: () => _saveGame('plan_to_play'),
+                    icon: const Icon(Icons.bookmark_add),
+                    label: const Text('Pendiente'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueGrey,
+                      foregroundColor: Colors.white,
+                    ),
                   ),
-                ),
-              ],
+                  ElevatedButton.icon(
+                    onPressed: () => _saveGame('completed'),
+                    icon: const Icon(Icons.check_circle),
+                    label: const Text('Completado'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green[800],
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () => _saveGame('dropped'),
+                    icon: const Icon(Icons.cancel),
+                    label: const Text('Abandonado'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red[800],
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 24),
             const Text(

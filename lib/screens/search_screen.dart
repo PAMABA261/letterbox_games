@@ -50,8 +50,8 @@ class _SearchScreenState extends State<SearchScreen> {
       final response = await http.post(
         url,
         headers: {
-          'Client-ID': 'MY_CLIENT_ID',
-          'Authorization': 'Bearer MY_ACCESS_TOKEN',
+          'Client-ID': 'MY_SUPABASE_ID',
+          'Authorization': 'Bearer MY_SUPABASE_KEY',
           'Accept': 'application/json',
         },
         body:
