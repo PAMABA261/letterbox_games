@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'screens/login_screen.dart';
 import 'screens/search_screen.dart';
 import 'services/supabase_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SupabaseService.initialize();
-  runApp(const BackloggdCloneApp());
+
+  final bool hasSession = Supabase.instance.client.auth.currentSession != null;
+
+  runApp(BackloggdCloneApp(initialRouteIsLoggedIn: hasSession));
 }
 
 class BackloggdCloneApp extends StatelessWidget {
-  const BackloggdCloneApp({super.key});
+  final bool initialRouteIsLoggedIn;
+
+  const BackloggdCloneApp({super.key, required this.initialRouteIsLoggedIn});
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +31,7 @@ class BackloggdCloneApp extends StatelessWidget {
           surface: const Color(0xFF1C2228),
         ),
       ),
-      home: const SearchScreen(),
+      home: initialRouteIsLoggedIn ? const SearchScreen() : const LoginScreen(),
     );
   }
 }

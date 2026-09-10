@@ -3,8 +3,10 @@ import 'package:backloggd_clone/main.dart';
 
 void main() {
   testWidgets('Catalog screen smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const BackloggdCloneApp());
+    // Pasamos el parámetro requerido para que coincida con el nuevo constructor de main.dart
+    await tester.pumpWidget(
+      const BackloggdCloneApp(initialRouteIsLoggedIn: true),
+    );
 
     // Verify that our search catalog title or hint text is present.
     expect(find.text('Catálogo de Juegos'), findsOneWidget);
