@@ -15,15 +15,39 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   Timer? _debounce;
+
   List<dynamic> _games = [];
   bool _isLoading = false;
+  bool _isFetchingMore = false;
+
+  String _currentQuery = '';
+  int _offset = 0;
+  final int _limit = 50;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     _debounce?.cancel();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent - 200 &&
+        !_isLoading &&
+        !_isFetchingMore &&
+        _currentQuery.isNotEmpty) {
+      _fetchGames(isRefresh: false);
+    }
   }
 
   void _onSearchChanged(String query) {
@@ -32,30 +56,41 @@ class _SearchScreenState extends State<SearchScreen> {
     _debounce = Timer(const Duration(milliseconds: 500), () {
       final trimmedQuery = query.trim();
       if (trimmedQuery.isNotEmpty) {
-        _searchGames(trimmedQuery);
+        setState(() {
+          _currentQuery = trimmedQuery;
+          _offset = 0;
+          _games = [];
+        });
+        _fetchGames(isRefresh: true);
       } else {
         setState(() {
+          _currentQuery = '';
           _games = [];
           _isLoading = false;
+          _isFetchingMore = false;
         });
       }
     });
   }
 
-  Future<void> _searchGames(String query) async {
-    setState(() => _isLoading = true);
+  Future<void> _fetchGames({required bool isRefresh}) async {
+    if (isRefresh) {
+      setState(() => _isLoading = true);
+    } else {
+      setState(() => _isFetchingMore = true);
+    }
 
     final url = Uri.parse('https://api.igdb.com/v4/games');
     try {
       final response = await http.post(
         url,
         headers: {
-          'Client-ID': 'MY_SUPABASE_ID',
-          'Authorization': 'Bearer MY_SUPABASE_KEY',
+          'Client-ID': 'DUMMY',
+          'Authorization': 'Bearer DUMMY',
           'Accept': 'application/json',
         },
         body:
-            'search "$query"; fields name, cover.url, summary, first_release_date, genres.name, category, involved_companies.company.name; where cover != null; limit 300;',
+            'search "$_currentQuery"; fields name, cover.url, summary, first_release_date, genres.name, category, involved_companies.company.name; where cover != null; limit $_limit; offset $_offset;',
       );
 
       if (!mounted) return;
@@ -106,17 +141,26 @@ class _SearchScreenState extends State<SearchScreen> {
         }).toList();
 
         setState(() {
-          _games = mainGames;
-          _isLoading = false;
+          if (isRefresh) {
+            _games = mainGames;
+          } else {
+            _games.addAll(mainGames);
+          }
+          _offset += _limit;
         });
       } else {
-        setState(() => _isLoading = false);
         debugPrint('Error de red: ${response.statusCode}');
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() => _isLoading = false);
       debugPrint('Excepción: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _isFetchingMore = false;
+        });
+      }
     }
   }
 
@@ -171,7 +215,11 @@ class _SearchScreenState extends State<SearchScreen> {
                   icon: const Icon(Icons.clear, color: Colors.grey),
                   onPressed: () {
                     _searchController.clear();
-                    setState(() => _games = []);
+                    setState(() {
+                      _games = [];
+                      _currentQuery = '';
+                      _offset = 0;
+                    });
                   },
                 ),
                 border: OutlineInputBorder(
@@ -196,59 +244,84 @@ class _SearchScreenState extends State<SearchScreen> {
                         style: TextStyle(color: Colors.grey[500], fontSize: 16),
                       ),
                     )
-                  : GridView.builder(
-                      padding: const EdgeInsets.all(10),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 3,
-                            childAspectRatio: 0.68,
-                            crossAxisSpacing: 10,
-                            mainAxisSpacing: 10,
-                          ),
-                      itemCount: _games.length,
-                      itemBuilder: (context, index) {
-                        final game = _games[index];
-                        final rawUrl = game['cover'] != null
-                            ? game['cover']['url']
-                            : '';
-                        final coverUrl = rawUrl.isNotEmpty
-                            ? 'https:${rawUrl.replaceFirst('t_thumb', 't_cover_big')}'
-                            : 'https://via.placeholder.com/264x352';
+                  : Stack(
+                      children: [
+                        GridView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.all(10),
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 3,
+                                childAspectRatio: 0.68,
+                                crossAxisSpacing: 10,
+                                mainAxisSpacing: 10,
+                              ),
+                          itemCount: _games.length,
+                          itemBuilder: (context, index) {
+                            final game = _games[index];
+                            final rawUrl = game['cover'] != null
+                                ? game['cover']['url']
+                                : '';
+                            final coverUrl = rawUrl.isNotEmpty
+                                ? 'https:${rawUrl.replaceFirst('t_thumb', 't_cover_big')}'
+                                : 'https://via.placeholder.com/264x352';
 
-                        return GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => DetailScreen(
-                                  game: game,
-                                  coverUrl: coverUrl,
+                            return GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => DetailScreen(
+                                      game: game,
+                                      coverUrl: coverUrl,
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: Hero(
+                                tag: game['id'].toString(),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: Image.network(
+                                    coverUrl,
+                                    fit: BoxFit.cover,
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                            Container(
+                                              color: Colors.grey[850],
+                                              child: const Center(
+                                                child: Icon(
+                                                  Icons.broken_image,
+                                                  color: Colors.white54,
+                                                ),
+                                              ),
+                                            ),
+                                  ),
                                 ),
                               ),
                             );
                           },
-                          child: Hero(
-                            tag: game['id'].toString(),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(6),
-                              child: Image.network(
-                                coverUrl,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    Container(
-                                      color: Colors.grey[850],
-                                      child: const Center(
-                                        child: Icon(
-                                          Icons.broken_image,
-                                          color: Colors.white54,
-                                        ),
-                                      ),
-                                    ),
+                        ),
+                        if (_isFetchingMore)
+                          Positioned(
+                            bottom: 10,
+                            left: 0,
+                            right: 0,
+                            child: Center(
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF1C2228),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const CircularProgressIndicator(
+                                  color: Colors.greenAccent,
+                                  strokeWidth: 3,
+                                ),
                               ),
                             ),
                           ),
-                        );
-                      },
+                      ],
                     ),
             ),
         ],
