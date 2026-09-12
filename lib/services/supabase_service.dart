@@ -33,6 +33,8 @@ class SupabaseService {
     required String status,
     double? rating,
     String? review,
+    String? platform,
+    List<String>? availablePlatforms,
   }) async {
     final authenticated = await ensureAuthenticated();
     if (!authenticated) throw Exception('No se pudo autenticar el usuario.');
@@ -45,6 +47,8 @@ class SupabaseService {
       'game_name': gameName,
       'cover_url': coverUrl,
       'status': status,
+      'platform': platform,
+      'available_platforms': availablePlatforms,
       ...?(rating != null ? {'rating': rating} : null),
       ...?(review != null ? {'review': review} : null),
     }, onConflict: 'user_id, game_id');
@@ -70,6 +74,7 @@ class SupabaseService {
     required String status,
     double? rating,
     String? review,
+    String? platform,
   }) async {
     final authenticated = await ensureAuthenticated();
     if (!authenticated) throw Exception('No se pudo autenticar el usuario.');
@@ -78,7 +83,12 @@ class SupabaseService {
 
     await client
         .from('user_games')
-        .update({'status': status, 'rating': rating, 'review': review})
+        .update({
+          'status': status,
+          'rating': rating,
+          'review': review,
+          'platform': platform,
+        })
         .eq('user_id', userId)
         .eq('game_id', gameId);
   }

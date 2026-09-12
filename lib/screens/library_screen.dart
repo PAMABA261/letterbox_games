@@ -68,6 +68,25 @@ class _LibraryScreenState extends State<LibraryScreen>
     double currentRating = item['rating'] != null
         ? (item['rating'] as num).toDouble()
         : 0.0;
+
+    // 1. Capturamos la plataforma actual
+    String? currentPlatform = item['platform'];
+
+    // 2. Leemos la lista de consolas desde Supabase
+    List<String> modalPlatforms = [];
+    if (item['available_platforms'] != null) {
+      modalPlatforms = List<String>.from(item['available_platforms']);
+    } else {
+      modalPlatforms = ['PC', 'Nintendo Switch', 'Emulador', 'Otro'];
+    }
+
+    // Por seguridad: si hay una plataforma seleccionada pero no está en la lista, la añadimos para que no dé error
+    if (currentPlatform != null &&
+        currentPlatform.isNotEmpty &&
+        !modalPlatforms.contains(currentPlatform)) {
+      modalPlatforms.insert(0, currentPlatform);
+    }
+
     final TextEditingController reviewController = TextEditingController(
       text: item['review'] ?? '',
     );
@@ -187,6 +206,46 @@ class _LibraryScreenState extends State<LibraryScreen>
                         ),
                       ),
                     ),
+
+                    // --- NUEVO: DESPLEGABLE DE PLATAFORMAS EN EL MODAL ---
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Plataforma',
+                      style: TextStyle(color: Colors.grey, fontSize: 14),
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value:
+                          (currentPlatform != null &&
+                              currentPlatform!.isNotEmpty)
+                          ? currentPlatform
+                          : null,
+                      dropdownColor: const Color(0xFF2C3440),
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: 'Selecciona plataforma',
+                        hintStyle: TextStyle(color: Colors.grey[600]),
+                        filled: true,
+                        fillColor: const Color(0xFF2C3440),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                      items: modalPlatforms.map((String platform) {
+                        return DropdownMenuItem<String>(
+                          value: platform,
+                          child: Text(platform),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setModalState(() => currentPlatform = val);
+                        }
+                      },
+                    ),
+
+                    // -----------------------------------------------------
                     const SizedBox(height: 24),
                     Row(
                       children: [
@@ -227,6 +286,7 @@ class _LibraryScreenState extends State<LibraryScreen>
                               style: TextStyle(color: Colors.white),
                             ),
                             onPressed: () async {
+                              // Se envía la plataforma actualizada a Supabase
                               await SupabaseService.updateGame(
                                 gameId: item['game_id'],
                                 status: currentStatus,
@@ -236,6 +296,8 @@ class _LibraryScreenState extends State<LibraryScreen>
                                 review: reviewController.text.isNotEmpty
                                     ? reviewController.text
                                     : null,
+                                platform:
+                                    currentPlatform, // <-- Enviamos la plataforma
                               );
                               if (!context.mounted) return;
                               Navigator.pop(context);
@@ -318,6 +380,8 @@ class _LibraryScreenState extends State<LibraryScreen>
         final rating = item['rating'];
         final review = item['review'];
 
+        final platform = item['platform'];
+
         return GestureDetector(
           onTap: () => _showEditDeleteModal(item),
           child: Container(
@@ -364,6 +428,36 @@ class _LibraryScreenState extends State<LibraryScreen>
                         ),
                       ),
                       const SizedBox(height: 4),
+
+                      // ETIQUETA DE PLATAFORMA
+                      if (platform != null && platform.toString().isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4.0),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.blueAccent.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: Colors.blueAccent.withOpacity(0.5),
+                              ),
+                            ),
+                            child: Text(
+                              platform.toString(),
+                              style: const TextStyle(
+                                fontSize: 9,
+                                color: Colors.blueAccent,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -429,7 +523,6 @@ class _LibraryScreenState extends State<LibraryScreen>
         ),
         backgroundColor: const Color(0xFF1C2228),
         actions: [
-          // Botón de Ordenación
           PopupMenuButton<String>(
             icon: const Icon(Icons.sort, color: Colors.greenAccent),
             tooltip: 'Ordenar',

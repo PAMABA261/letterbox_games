@@ -15,6 +15,29 @@ class _DetailScreenState extends State<DetailScreen> {
   double _rating = 0.0;
   final TextEditingController _reviewController = TextEditingController();
 
+  String? _selectedPlatform;
+
+  List<String> _platforms = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _platforms = _extractPlatforms();
+  }
+
+  List<String> _extractPlatforms() {
+    final platformsList = widget.game['platforms'];
+    List<String> extracted = [];
+
+    if (platformsList != null && platformsList is List) {
+      extracted = platformsList.map((p) => p['name'] as String).toList();
+    }
+
+    extracted.addAll(['Emulador']);
+
+    return extracted.toSet().toList();
+  }
+
   Future<void> _saveGame(String status) async {
     try {
       await SupabaseService.saveGame(
@@ -26,6 +49,8 @@ class _DetailScreenState extends State<DetailScreen> {
         review: _reviewController.text.isNotEmpty
             ? _reviewController.text
             : null,
+        platform: _selectedPlatform,
+        availablePlatforms: _platforms,
       );
 
       if (mounted) {
@@ -182,6 +207,34 @@ class _DetailScreenState extends State<DetailScreen> {
               ),
             ),
             const SizedBox(height: 20),
+
+            DropdownButtonFormField<String>(
+              value: _selectedPlatform,
+              decoration: InputDecoration(
+                labelText: 'Plataforma / Emulador',
+                labelStyle: const TextStyle(color: Colors.greenAccent),
+                filled: true,
+                fillColor: const Color(0xFF2C3440),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              dropdownColor: const Color(0xFF2C3440),
+              style: const TextStyle(color: Colors.white),
+              items: _platforms.map((String platform) {
+                return DropdownMenuItem<String>(
+                  value: platform,
+                  child: Text(platform),
+                );
+              }).toList(),
+              onChanged: (String? newValue) {
+                setState(() {
+                  _selectedPlatform = newValue;
+                });
+              },
+            ),
+            const SizedBox(height: 24),
 
             Center(
               child: Wrap(

@@ -85,12 +85,12 @@ class _SearchScreenState extends State<SearchScreen> {
       final response = await http.post(
         url,
         headers: {
-          'Client-ID': 'DUMMY',
-          'Authorization': 'Bearer DUMMY',
+          'Client-ID': '###',
+          'Authorization': 'Bearer ###',
           'Accept': 'application/json',
         },
         body:
-            'search "$_currentQuery"; fields name, cover.url, summary, first_release_date, genres.name, category, involved_companies.company.name; where cover != null; limit $_limit; offset $_offset;',
+            'search "$_currentQuery"; fields name, cover.url, summary, first_release_date, genres.name, category, involved_companies.company.name, platforms.name; where cover != null; limit $_limit; offset $_offset;',
       );
 
       if (!mounted) return;
