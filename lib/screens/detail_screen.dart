@@ -16,7 +16,6 @@ class _DetailScreenState extends State<DetailScreen> {
   final TextEditingController _reviewController = TextEditingController();
 
   String? _selectedPlatform;
-
   List<String> _platforms = [];
 
   @override
@@ -69,6 +68,242 @@ class _DetailScreenState extends State<DetailScreen> {
     }
   }
 
+  // --- MODAL PARA AÑADIR A LISTAS PERSONALIZADAS ---
+  void _showAddToListModal(BuildContext context) async {
+    List<dynamic> lists = [];
+    try {
+      lists = await SupabaseService.fetchUserLists();
+    } catch (e) {
+      debugPrint('Error cargando listas: $e');
+    }
+
+    if (!context.mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF1C2228),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Añadir a una lista',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  if (lists.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 20.0),
+                      child: Center(
+                        child: Text(
+                          'No tienes listas creadas todavía.',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ),
+                    )
+                  else
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 200),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: lists.length,
+                        itemBuilder: (context, index) {
+                          final list = lists[index];
+                          return ListTile(
+                            title: Text(
+                              list['title'],
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                            subtitle: list['description'] != null
+                                ? Text(
+                                    list['description'],
+                                    style: TextStyle(
+                                      color: Colors.grey[400],
+                                      fontSize: 12,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  )
+                                : null,
+                            trailing: const Icon(
+                              Icons.add_circle_outline,
+                              color: Colors.greenAccent,
+                            ),
+                            onTap: () async {
+                              try {
+                                await SupabaseService.addGameToList(
+                                  listId: list['id'],
+                                  gameId: widget.game['id'],
+                                  gameName: widget.game['name'],
+                                  coverUrl: widget.coverUrl,
+                                );
+                                if (!context.mounted) return;
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      '¡Añadido a "${list['title']}"!',
+                                    ),
+                                  ),
+                                );
+                              } catch (e) {
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'El juego ya está en esta lista.',
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
+                          );
+                        },
+                      ),
+                    ),
+
+                  const Divider(color: Colors.grey),
+                  const SizedBox(height: 8),
+
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.greenAccent,
+                      side: const BorderSide(color: Colors.greenAccent),
+                      minimumSize: const Size(double.infinity, 45),
+                    ),
+                    icon: const Icon(Icons.create_new_folder),
+                    label: const Text('Crear nueva lista'),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _showCreateListModal(context);
+                    },
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showCreateListModal(BuildContext context) {
+    final TextEditingController titleController = TextEditingController();
+    final TextEditingController descController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF1C2228),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 16,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Nueva Lista Personalizada',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: titleController,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'Título (ej. Top RPGs)',
+                  labelStyle: const TextStyle(color: Colors.greenAccent),
+                  filled: true,
+                  fillColor: const Color(0xFF2C3440),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: descController,
+                style: const TextStyle(color: Colors.white),
+                maxLines: 2,
+                decoration: InputDecoration(
+                  labelText: 'Descripción (opcional)',
+                  labelStyle: TextStyle(color: Colors.grey[400]),
+                  filled: true,
+                  fillColor: const Color(0xFF2C3440),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green[700],
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 45),
+                ),
+                onPressed: () async {
+                  if (titleController.text.trim().isEmpty) return;
+
+                  try {
+                    await SupabaseService.createList(
+                      titleController.text.trim(),
+                      descController.text.trim(),
+                    );
+                    if (!context.mounted) return;
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('¡Lista creada con éxito!')),
+                    );
+                    _showAddToListModal(context);
+                  } catch (e) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error al crear lista: $e')),
+                    );
+                  }
+                },
+                child: const Text('Crear y continuar'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+  // ----------------------------------------------------
+
   String _getReleaseYear() {
     final timestamp = widget.game['first_release_date'];
     if (timestamp == null) return 'Desconocido';
@@ -94,6 +329,14 @@ class _DetailScreenState extends State<DetailScreen> {
           overflow: TextOverflow.ellipsis,
         ),
         backgroundColor: const Color(0xFF1C2228),
+        actions: [
+          // Botón para desplegar el modal de listas
+          IconButton(
+            icon: const Icon(Icons.playlist_add, color: Colors.greenAccent),
+            tooltip: 'Añadir a lista',
+            onPressed: () => _showAddToListModal(context),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -217,7 +460,6 @@ class _DetailScreenState extends State<DetailScreen> {
                 fillColor: const Color(0xFF2C3440),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide.none,
                 ),
               ),
               dropdownColor: const Color(0xFF2C3440),

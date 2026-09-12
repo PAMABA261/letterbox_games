@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/supabase_service.dart';
+import 'lists_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -69,10 +70,8 @@ class _LibraryScreenState extends State<LibraryScreen>
         ? (item['rating'] as num).toDouble()
         : 0.0;
 
-    // 1. Capturamos la plataforma actual
     String? currentPlatform = item['platform'];
 
-    // 2. Leemos la lista de consolas desde Supabase
     List<String> modalPlatforms = [];
     if (item['available_platforms'] != null) {
       modalPlatforms = List<String>.from(item['available_platforms']);
@@ -80,7 +79,6 @@ class _LibraryScreenState extends State<LibraryScreen>
       modalPlatforms = ['PC', 'Nintendo Switch', 'Emulador', 'Otro'];
     }
 
-    // Por seguridad: si hay una plataforma seleccionada pero no está en la lista, la añadimos para que no dé error
     if (currentPlatform != null &&
         currentPlatform.isNotEmpty &&
         !modalPlatforms.contains(currentPlatform)) {
@@ -206,8 +204,6 @@ class _LibraryScreenState extends State<LibraryScreen>
                         ),
                       ),
                     ),
-
-                    // --- NUEVO: DESPLEGABLE DE PLATAFORMAS EN EL MODAL ---
                     const SizedBox(height: 16),
                     const Text(
                       'Plataforma',
@@ -244,8 +240,6 @@ class _LibraryScreenState extends State<LibraryScreen>
                         }
                       },
                     ),
-
-                    // -----------------------------------------------------
                     const SizedBox(height: 24),
                     Row(
                       children: [
@@ -286,7 +280,6 @@ class _LibraryScreenState extends State<LibraryScreen>
                               style: TextStyle(color: Colors.white),
                             ),
                             onPressed: () async {
-                              // Se envía la plataforma actualizada a Supabase
                               await SupabaseService.updateGame(
                                 gameId: item['game_id'],
                                 status: currentStatus,
@@ -296,8 +289,7 @@ class _LibraryScreenState extends State<LibraryScreen>
                                 review: reviewController.text.isNotEmpty
                                     ? reviewController.text
                                     : null,
-                                platform:
-                                    currentPlatform, // <-- Enviamos la plataforma
+                                platform: currentPlatform,
                               );
                               if (!context.mounted) return;
                               Navigator.pop(context);
@@ -379,7 +371,6 @@ class _LibraryScreenState extends State<LibraryScreen>
 
         final rating = item['rating'];
         final review = item['review'];
-
         final platform = item['platform'];
 
         return GestureDetector(
@@ -428,8 +419,6 @@ class _LibraryScreenState extends State<LibraryScreen>
                         ),
                       ),
                       const SizedBox(height: 4),
-
-                      // ETIQUETA DE PLATAFORMA
                       if (platform != null && platform.toString().isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 4.0),
@@ -457,7 +446,6 @@ class _LibraryScreenState extends State<LibraryScreen>
                             ),
                           ),
                         ),
-
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -523,6 +511,16 @@ class _LibraryScreenState extends State<LibraryScreen>
         ),
         backgroundColor: const Color(0xFF1C2228),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.list_alt, color: Colors.greenAccent),
+            tooltip: 'Mis Listas',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ListsScreen()),
+              );
+            },
+          ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.sort, color: Colors.greenAccent),
             tooltip: 'Ordenar',

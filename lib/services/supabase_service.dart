@@ -105,4 +105,63 @@ class SupabaseService {
         .eq('user_id', userId)
         .eq('game_id', gameId);
   }
+
+  static Future<List<dynamic>> fetchUserLists() async {
+    final authenticated = await ensureAuthenticated();
+    if (!authenticated) return [];
+
+    final userId = client.auth.currentUser!.id;
+    final response = await client
+        .from('custom_lists')
+        .select()
+        .eq('user_id', userId)
+        .order('created_at', ascending: false);
+    return response;
+  }
+
+  static Future<void> createList(String title, String description) async {
+    final authenticated = await ensureAuthenticated();
+    if (!authenticated) throw Exception('No se pudo autenticar el usuario.');
+
+    final userId = client.auth.currentUser!.id;
+    await client.from('custom_lists').insert({
+      'user_id': userId,
+      'title': title,
+      'description': description,
+    });
+  }
+
+  static Future<void> addGameToList({
+    required String listId,
+    required int gameId,
+    required String gameName,
+    required String coverUrl,
+  }) async {
+    final authenticated = await ensureAuthenticated();
+    if (!authenticated) throw Exception('No autenticado.');
+
+    try {
+      await client.from('list_games').insert({
+        'list_id': listId,
+        'game_id': gameId,
+        'game_name': gameName,
+        'cover_url': coverUrl,
+      });
+    } catch (e) {
+      throw Exception('El juego ya está en esta lista o hubo un error.');
+    }
+  }
+
+  static Future<List<dynamic>> fetchGamesForList(String listId) async {
+    final authenticated = await ensureAuthenticated();
+    if (!authenticated) return [];
+
+    final response = await client
+        .from('list_games')
+        .select()
+        .eq('list_id', listId)
+        .order('added_at', ascending: false);
+
+    return response;
+  }
 }
